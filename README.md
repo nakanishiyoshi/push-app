@@ -1,4 +1,4 @@
-# dmm-promotion-front
+# push-front-app
 
 ## Spec
 
