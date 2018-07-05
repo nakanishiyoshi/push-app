@@ -1,0 +1,92 @@
+@startuml
+title segment comfirm task
+
+actor Client <<user>>
+participant View
+control Task
+control Task_2
+collections Reducer
+database State
+
+group Submit form behavior
+    Client -> View: segment/comfirm\nClick submit <button />
+    View -> Task: onClick\nactions@postSegmentRegistData(state.segment.comfirm)\nPOST_SEGMENT_REGIST_DATA,state.comfirm
+    note left
+        state.segment.comfirm
+        {
+            "name": "購入者",
+            "description": "商品購入者のみ",
+            "uploadCSV": "[File]"
+        }
+    endnote
+    activate Task #ef857d
+    hnote over Task #a3d6cc : hundleRequestPostSegmentRegistData
+    Task -> State: saga@select\nstate => state.promotion.promotionItem.promotion_id
+    hnote over State #fffacd: promotion.promotionItem.
+    State -> Task: promotion_id
+    Task -> API: saga@call\nPOST /v2/promotions/${promotion_id}/segments\nbody: JSON.stringify(registData)
+    note left
+        registData
+        {
+            "name": "購入者",
+            "description": "商品購入者のみ"
+        }
+        ※ uploadCSV は別APIで登録
+    endnote
+    alt Create 201
+        API -> Task: response status 201
+        note left
+            created response
+            {
+                "segment_id": "seg12345678901234567890",
+                "name": "購入者",
+                "description": "商品購入者のみ",
+                "created_at": "2017-07-18T16:22:44+09:00",
+                "updated_at": "2017-07-18T16:22:44+09:00"
+            }
+        endnote
+        Task -> Task_2: saga@put\nPOST_CSV_REGIST_DATA\n{uploadCSV, promotion_id, segment_id}
+        deactivate Task
+        group Registration file
+            activate Task_2 #ef857d
+            hnote over Task_2 #a3d6cc : hundleRequestPostCSVfileRegistData
+            Task_2 -> API:  saga@call\nPOST /v2/promotions/${promotion_id}/segments/${segment_id}/users/upload\nbody: uploadCSV
+            alt Create 201
+                API -> Task_2: response status 201
+                Task_2 -> View: next-routes@pushRoutes\nsegment/list?promotionId=${promotion_id}
+                hnote over View #ead7a4 : セグメント一覧へ遷移
+                View -> Client: GET 200 segment/list?promotionId=XXXXXX
+            else WIP faild
+                note left
+                    検討中
+                endnote
+            end
+            deactivate Task_2
+        end
+    else WIP faild 400
+        API -> Task: error 400
+        note left
+            検討中
+        endnote
+    else WIP faild 404
+        API -> Task: error 401
+    else WIP faild 500
+        API -> Task: error 500
+    end
+end
+
+group Submit Cancel form behavior
+    Client -> View: segment/regist\nClick cancel <button />
+    View -> Task: onSubmit\nactions@cancelComfirmSegmentRegistData\nCANCEL_COMFIRM_REGIST_DATA
+    activate Task #ef857d
+    hnote over Task_2 #a3d6cc : hundleCancelPostSegmentRegistData
+    Task -> State: saga@select\nstate => state.promotion.promotionItem.promotion_id
+    hnote over State #fffacd: promotion.promotionItem
+    State -> Task: promotion_id
+    Task -> View: next-routes@pushRoutes\nsegment/regist?promotionId=${promotion_id}
+    deactivate Task
+    hnote over View #ead7a4 : セグメント登録画面へ遷移
+    View -> Client: GET 200 segment/regist?promotionId=XXXXXX
+end
+
+@enduml

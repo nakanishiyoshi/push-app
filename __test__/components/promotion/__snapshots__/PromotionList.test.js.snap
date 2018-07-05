@@ -1,0 +1,110 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Snapshot Testing PromotionList show test 1`] = `
+<ul
+  className="promotion_list"
+>
+  <li
+    className="jsx-1263913822 promotion_item"
+  >
+    <div
+      className="jsx-1263913822 promotion_title"
+      data-test="title"
+    >
+      動画
+    </div>
+    <div
+      className="jsx-1263913822 promotion_titleText"
+      data-test="titleText"
+    >
+      動画サービスキャンペーン情報
+    </div>
+    <div
+      className="jsx-1263913822 promotion_image"
+      data-test="image"
+    />
+    <div
+      className="jsx-1263913822 promotion_status"
+      data-test="status"
+    >
+      active
+    </div>
+    <div
+      className="jsx-1263913822 promotion_statusText"
+      data-test="statusText"
+    >
+      有効
+    </div>
+    <div
+      className="jsx-1263913822 promotion_innerLine"
+    />
+    <a
+      className="jsx-1263913822 promotion_scheduleBtn"
+      data-test="scheduleBtn"
+      href="/schedule?promotionID=TA0000015866e489df31f70002"
+      onClick={[Function]}
+    >
+      配信設定
+    </a>
+    <a
+      className="jsx-1263913822 promotion_editBtn"
+      data-test="editBtn"
+      href="/promotion/edit?promotionId=TA0000015866e489df31f70002"
+      onClick={[Function]}
+    >
+      編集
+    </a>
+  </li>
+  <li
+    className="jsx-1263913822 promotion_item"
+  >
+    <div
+      className="jsx-1263913822 promotion_title"
+      data-test="title"
+    >
+      動画
+    </div>
+    <div
+      className="jsx-1263913822 promotion_titleText"
+      data-test="titleText"
+    >
+      動画サービスキャンペーン情報
+    </div>
+    <div
+      className="jsx-1263913822 promotion_image"
+      data-test="image"
+    />
+    <div
+      className="jsx-1263913822 promotion_status"
+      data-test="status"
+    >
+      inactive
+    </div>
+    <div
+      className="jsx-1263913822 promotion_statusText"
+      data-test="statusText"
+    >
+      無効
+    </div>
+    <div
+      className="jsx-1263913822 promotion_innerLine"
+    />
+    <a
+      className="jsx-1263913822 promotion_scheduleBtn"
+      data-test="scheduleBtn"
+      href="/schedule?promotionID=TA0000015866e489df31f70003"
+      onClick={[Function]}
+    >
+      配信設定
+    </a>
+    <a
+      className="jsx-1263913822 promotion_editBtn"
+      data-test="editBtn"
+      href="/promotion/edit?promotionId=TA0000015866e489df31f70003"
+      onClick={[Function]}
+    >
+      編集
+    </a>
+  </li>
+</ul>
+`;

@@ -1,0 +1,67 @@
+@startuml
+title segment regist task
+
+actor Client <<user>>
+participant View
+control Task
+collections Reducer
+database State
+
+group Input form behavior
+    Client -> View: segment/regist\nInput regist data
+    View -> Reducer: actions@redux-form
+    Reducer -> State: reducer@redux-form
+    hnote over State #fffacd: form.segmentRegist
+    State -> View: reduxForm@redux-form
+    View -> Client: Change form view
+end
+
+group Submit Comfirm form behavior
+    Client -> View: segment/regist\nClick submit <button />
+    View -> Task: onSubmit\nactions@postSegmentRegistComfirmData(params)\nPOST_SEGMENT_REGIST_COMFIRM_DATA,params
+    note left
+        redux-form側の
+        バリデーション(invalid)を
+        有効にすることで
+        バリデーションがなくなるまで
+        submitできない
+    endnote
+    activate Task #ef857d
+    hnote over Task #a3d6cc : hundleRequestPostSegmentRegistComfirmData
+    Task -> Task: saga@take\nPOST_SEGMENT_REGIST_COMFIRM_DATA => comfirmData
+    Task -> View: saga@put\nstartSubmit
+    activate View #ffe9a9
+    Task -> Reducer: saga@put\n(SET_SEGMENT_REGIST_COMFIRM_DATA, comfirmData)
+    Reducer -> State: state@segment.comfirm
+    hnote over State #fffacd: segment.comfirm
+    State -> State: object@assign\nsegment.comfirm
+    Task -> View: saga@put\nstopSubmit
+    hnote over View #ead7a4 : form要素のリセット
+    deactivate View
+    Task -> State: saga@select\nstate => state.promotion.promotionItem.promotion_id
+    hnote over State #fffacd: promotion.promotionItem
+    State -> Task: promotion_id
+    Task -> View: next-routes@pushRoutes\nsegment/comfirm?promotionId=${promotion_id}
+    deactivate Task
+    hnote over View #ead7a4 : セグメント新規登録確認画面へ遷移
+    View -> Client: GET 200 segment/comfirm?promotionId=XXXXXX
+end
+
+group Submit Cancel form behavior
+    Client -> View: segment/regist\nClick cancel <button />
+    View -> Task: onSubmit\nactions@cancelComfirmSegmentRegistData\nCANCEL_COMFIRM_REGIST_DATA
+    activate Task #ef857d
+    hnote over Task_2 #a3d6cc : hundleCancelPostSegmentRegistComfirmData
+    Task -> Reducer : saga@put\nreset
+    Reducer -> State : redux-form@reset
+    State -> View : form要素のリセット
+    Task -> State: saga@select\nstate => state.promotion.promotionItem.promotion_id
+    hnote over State #fffacd: promotion.promotionItem
+    State -> Task: promotion_id
+    Task -> View: next-routes@pushRoutes\nsegment/list?promotionId=${promotion_id}
+    deactivate Task
+    hnote over View #ead7a4 : セグメント一覧へ遷移
+    View -> Client: GET 200 segment/list?promotionId=XXXXXX
+end
+
+@enduml

@@ -1,0 +1,114 @@
+@startuml
+title promotion edit task
+
+actor Client <<user>>
+participant View
+control Task
+collections Reducer
+database State
+
+group Initialize form behavior
+    Client -> View: GET promotion/edit&promotionId=XXXXXX
+    View -> Task: next@getInitialProps\nGET_PROMOTION, query.promotionId
+    hnote over Task #82cddd : hundleRequestGetPromotion
+    activate Task #ef857d
+    Task -> API: saga@call\nGET /v2/promotions/${query.promotionId}
+    alt Success 200
+        API -> Task: response status 200
+        Task -> Task: response.json()
+        Task -> Reducer: saga@put\n(SET_PROMOTION, json)
+        deactivate Task
+        Reducer -> State: state@promotion\npromotionItem
+        hnote over State #fffacd: promotion.promotionItem
+        State -> State: object@assign\npromotionItem
+        State -> View: mount initialValues: state.promotion.promotionItem
+        View -> Client: GET 200 promotion/edit&promotionId=XXXXXX
+    else No Content 204
+        API -> Task: response status 204
+        note left
+            んーそもそもこういう事態ってあるのか。。。
+        endnote
+    else WIP faild 400
+        API -> Task: error 400
+        note left
+            検討中
+        endnote
+    else WIP faild 401
+        API -> Task: error 401
+    else WIP faild 500
+        API -> Task: error 500
+    end
+end
+
+group Input form behavior
+    Client -> View: promotion/edit&promotionId=XXXXXX\nInput update data
+    View -> Reducer: actions@redux-form
+    Reducer -> State: reducer@redux-form
+    hnote over State #fffacd: form.promotionEdit
+    State -> View: reduxForm@redux-form
+    View -> Client: Change form view
+end
+
+group Submit form behavior
+    Client -> View: promotion/edit&promotionId=XXXXXX\nClick submit <button />
+    View -> Task: onSubmit\nactions@putPromotionUpdateData(params)\nPUT_PROMOTION_DATA,params
+    note left
+        redux-form側の
+        バリデーション(invalid)を
+        有効にすることで
+        バリデーションがなくなるまで
+        submitできない
+    endnote
+    activate Task #ef857d
+    hnote over Task #a3d6cc : hundleRequestPutPromotionUpdateData
+    Task -> View: saga@put\nstartSubmit
+    activate View #ffe9a9
+    hnote over View #ead7a4 :『登録中』の表示
+    Task -> API: saga@call\nPUT /v2/promotions/${params.promotion_id}\nbody: JSON.stringify(params)
+    alt Success 200
+        API -> Task: response status 200
+        Task -> View: saga@put\nstopSubmit
+        deactivate View
+        Task -> View : saga@put\nreset
+        hnote over View #ead7a4 : form要素のリセット
+        Task -> Reducer: saga@put\nDELETE_PROMOTION
+        Reducer -> State: state@promotion\npromotionItem
+        hnote over State #fffacd: promotion.promotionItem
+        State -> State: object@assign\npromotionList => emply object
+        hnote over State #ead7a4 : 更新前のStateを削除\n（initialValuesにマウントさせたプロモーション登録データ）
+        Task -> View: next-routes@pushRoutes\npromotion/list
+        deactivate Task
+        hnote over View #ead7a4 : プロモーション一覧へ遷移
+        View -> Client: GET 200 promotion/list
+    else WIP faild 400
+        API -> Task: error 400
+        hnote over Task #e8383d: saga@put\nstopSubmit, error
+        note left
+            検討中
+        endnote
+    else WIP faild 401
+        API -> Task: error 401
+    else WIP faild 500
+        API -> Task: error 500
+    end
+end
+
+group Submit Cancel form behavior
+    Client -> View: promotion/regist\nClick cancel <button />
+    View -> Task: onSubmit\nactions@cancelPPutPromotionUpdateData\nCANCEL_PUT_PROMOTION_DATA
+    activate Task #ef857d
+    Task -> Reducer : saga@put\nreset
+    Reducer -> State : redux-form@reset
+    State -> View : form要素のリセット
+    Task -> Reducer: saga@put\nDELETE_PROMOTION
+    Reducer -> State: state@promotion\npromotionItem
+    hnote over State #fffacd: promotion.promotionItem
+    State -> State: object@assign\npromotionItem => emply object
+    hnote over State #ead7a4 : 更新前のStateを削除\n（initialValuesにマウントさせたプロモーション登録データ）
+    Task -> View: next-routes@pushRoutes\npromotion/list
+    deactivate Task
+    hnote over View #ead7a4 : プロモーション一覧へ遷移
+    View -> Client: GET 200 promotion/list
+end
+
+@enduml

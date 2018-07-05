@@ -1,0 +1,39 @@
+@startuml
+title segment common task
+
+actor Client <<user>>
+participant View
+control Task
+collections Reducer
+database State
+
+group promotion data getting behavior
+    Client -> View: GET segment/**/*?promotionId=XXXXXX
+    View -> Task: next@getInitialProps\n(GET_PROMOTION, query.promotionId)
+    hnote over Task #82cddd : handleRequestGetPromotion
+    activate Task #ef857d
+    Task -> API: saga@call\nGET /v2/promotions/${query.promotionId}
+    alt Success 200
+        API -> Task: response status 200
+        Task -> Task: response.json()
+        Task -> Reducer: saga@put\n(SET_PROMOTION, json)
+        deactivate Task
+        Reducer -> State: state@promotion\npromotionItem
+        hnote over State #fffacd: promotion.promotionItem
+        State -> State: object@assign\npromotionItem
+        State -> View:
+        View -> Client: GET 200 segment/**/*?promotionId=XXXXXX
+    else No content 204
+        API -> Task: response status 204
+        note left
+            ありえなくない？
+        endnote
+    else WIP faild
+        API -> Task: error
+        note left
+            後回し
+        endnote
+    end
+end
+
+@enduml

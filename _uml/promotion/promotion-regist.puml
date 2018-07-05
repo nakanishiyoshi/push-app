@@ -1,0 +1,75 @@
+@startuml
+title promotion regist task
+
+actor Client <<user>>
+participant View
+control Task
+collections Reducer
+database State
+
+group Input form behavior
+    Client -> View: promotion/regist\nInput regist data
+    View -> Reducer: actions@redux-form
+    Reducer -> State: reducer@redux-form
+    hnote over State #fffacd: form.promotionRegist
+    State -> View: reduxForm@redux-form
+    View -> Client: Change form view
+end
+
+group Submit form behavior
+    Client -> View: promotion/regist\nClick submit <button />
+    View -> Task: onSubmit\nactions@postPromotionRegistData(params)\nPOST_PROMOTION_REGIST_DATA,params
+    note left
+        redux-form側の
+        バリデーション(invalid)を
+        有効にすることで
+        バリデーションがなくなるまで
+        submitできない
+    endnote
+    activate Task #ef857d
+    hnote over Task #a3d6cc : hundleRequestPostPromotionRegistData
+    Task -> View: saga@put\nstartSubmit
+    activate View #ffe9a9
+    hnote over View #ead7a4 :『登録中』の表示
+    Task -> API: saga@call\nPOST /v2/promotions\nbody: JSON.stringify(params)
+    alt Create 201
+        API -> Task: response status 201
+        Task -> View: saga@put\nstopSubmit
+        deactivate View
+        Task -> View : saga@put\nreset
+        hnote over View #ead7a4 : form要素のリセット
+        Task -> View: next-routes@pushRoutes\npromotion/list
+        deactivate Task
+        hnote over View #ead7a4 : プロモーション一覧へ遷移
+        View -> Client: GET 200 promotion/list
+    else WIP faild 400
+        API -> Task: error 400
+        hnote over Task #e8383d: saga@put\nstopSubmit, error
+        note left
+            [WIP]エラーハンドリング
+            検討中
+            API側と合わせていく
+        endnote
+    else WIP faild 404
+        API -> Task: error 404
+    else WIP faild 500
+        API -> Task: error 500
+    else WIP faild 504
+        API -> Task: error 504
+    end
+end
+
+group Submit Cancel form behavior
+    Client -> View: promotion/regist\nClick cancel <button />
+    View -> Task: onSubmit\nactions@cancelPostPromotionRegistData\nCANCEL_POST_PROMOTION_DATA
+    activate Task #ef857d
+    Task -> Reducer : saga@put\nreset
+    Reducer -> State : redux-form@reset
+    State -> View : form要素のリセット
+    Task -> View: next-routes@pushRoutes\npromotion/list
+    deactivate Task
+    hnote over View #ead7a4 : プロモーション一覧へ遷移
+    View -> Client: GET 200 promotion/list
+end
+
+@enduml

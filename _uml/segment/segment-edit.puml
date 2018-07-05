@@ -1,0 +1,168 @@
+@startuml
+title segment edit task
+
+actor Client <<user>>
+participant View
+control Task
+control Task_2
+collections Reducer
+database State
+
+group Initialize form behavior
+    Client -> View: GET segment/edit&promotionId=XXXXXX&segmentId=YYYYYY
+    View -> Task: next@getInitialProps\n(GET_SEGMENT, query.promotionId, query.segmentId)
+    hnote over Task #82cddd : hundleRequestGetSegment
+    activate Task #ef857d
+    Task -> API: saga@call\nGET /v2/promotions/${query.promotionId}/segments/${query.segmentId}
+    alt Success 200
+        API -> Task: response status 200
+        Task -> Task: response.json()
+        Task -> Reducer: saga@put\n(SET_SEGMENT, json)
+        deactivate Task
+        Reducer -> State: state@segment\nsegmentItem
+        hnote over State #fffacd: segment.segmentItem
+        State -> State: object@assign\nsegmentItem
+        State -> View: mount initialValues: state.segment.segmentItem
+        View -> Client: GET 200 segment/edit&promotionId=XXXXXX&segmentId=YYYYYY
+    else No Content 204
+        API -> Task: response status 204
+        note left
+            んーそもそもこういう事態ってあるのか。。。
+        endnote
+    else WIP faild 400
+        API -> Task: error 400
+        note left
+            検討中
+        endnote
+    else WIP faild 401
+        API -> Task: error 401
+    else WIP faild 500
+        API -> Task: error 500
+    end
+end
+
+group Input form behavior
+    Client -> View: segment/edit&promotionId=XXXXXX&segmentId=YYYYYY\nInput update data
+    View -> Reducer: actions@redux-form
+    Reducer -> State: reducer@redux-form
+    hnote over State #fffacd: form.segmentEdit
+    State -> View: reduxForm@redux-form
+    View -> Client: Change form view
+end
+
+group Submit form behavior
+    Client -> View: segment/edit&promotionId=XXXXXX&segmentId=YYYYYY\nClick submit <button />
+    View -> Task: onSubmit\nactions@putSegmentUpdateData(params)\nPUT_SEGMENT_DATA,params
+    note left
+        redux-form側の
+        バリデーション(invalid)を
+        有効にすることで
+        バリデーションがなくなるまで
+        submitできない
+    endnote
+    activate Task #ef857d
+    hnote over Task #a3d6cc : hundleRequestPutSegmentUpdateData
+    Task -> View: saga@put\nstartSubmit
+    activate View #ffe9a9
+    hnote over View #ead7a4 :『登録中』の表示
+    Task -> State: saga@select\nstate => state.promotion.promotionItem.promotion_id
+    hnote over State #fffacd: promotion.promotionItem
+    State -> Task: promotion_id
+    Task -> State: saga@select\nstate => state.segment.segmentItem.segment_id
+    hnote over State #fffacd: segment.segmentItem
+    State -> Task: segment_id
+    Task -> API: saga@call\nPUT /v2/promotions/${promotion_id}/segments/${segment_id}\nbody: JSON.stringify(params)
+    note left
+        registData
+        {
+            "name": "購入者",
+            "description": "商品購入者のみ"
+        }
+        ※ uploadCSV は別APIで登録
+    endnote
+    alt Success 200
+        API -> Task: response status 200
+        alt CSVのアップロードがあった
+            Task -> Task_2: saga@put\nPOST_CSV_REGIST_DATA\n{uploadCSV, promotion_id, segment_id}
+            deactivate Task
+            group Registration file
+                activate Task_2 #ef857d
+                hnote over Task_2 #a3d6cc : hundleRequestPostCSVfileRegistData
+                Task_2 -> API:  saga@call\nPOST /v2/promotions/${promotion_id}/segments/${segment_id}/users/upload\nbody: uploadCSV
+                alt Create 201
+                    API -> Task_2: response status 201
+                    Task_2 -> View: saga@put\nstopSubmit
+                    deactivate View
+                    Task_2-> View : saga@put\nreset
+                    hnote over View #ead7a4 : form要素のリセット
+                    Task_2 -> Reducer: saga@put\nDELETE_SEGMENT
+                    Reducer -> State: state@segment\nsegmentItem
+                    hnote over State #fffacd: segment.segmentItem
+                    State -> State: object@assign\nsegmentItem => emply object
+                    hnote over State #ead7a4 : 更新前のStateを削除\n（initialValuesにマウントさせたセグメント登録データ）
+                    Task_2 -> View: next-routes@pushRoutes\nsegment/list?promotionId=${promotion_id}
+                    hnote over View #ead7a4 : セグメント一覧へ遷移
+                    View -> Client: GET 200 segment/list?promotionId=XXXXXX
+                else WIP faild
+                    API -> Task_2: error
+                    note left
+                        検討中
+                    endnote
+                end
+                deactivate Task_2
+            end
+        else CSVのアップロードが無かった
+            Task -> View: saga@put\nstopSubmit
+            note right
+                CSV uploadは行わない
+            endnote
+            activate Task #ef857d
+            hnote over Task #a3d6cc : hundleRequestPutSegmentUpdateData
+            Task -> View : saga@put\nreset
+            hnote over View #ead7a4 : form要素のリセット
+            Task -> Reducer: saga@put\nDELETE_SEGMENT
+            Reducer -> State: state@segment\nsegmentItem
+            hnote over State #fffacd: segment.segmentItem
+            State -> State: object@assign\nsegmentItem => emply object
+            hnote over State #ead7a4 : 更新前のStateを削除\n（initialValuesにマウントさせたセグメント登録データ）
+            Task -> View: next-routes@pushRoutes\nsegment/list?promotionId=${promotion_id}
+            deactivate Task
+            hnote over View #ead7a4 : セグメント一覧へ遷移
+            View -> Client: GET 200 segment/list?promotionId=XXXXXX
+        end
+    else WIP faild 400
+        API -> Task: error 400
+        hnote over Task #e8383d: saga@put\nstopSubmit, error
+        note left
+            検討中
+        endnote
+    else WIP faild 401
+        API -> Task: error 401
+    else WIP faild 500
+        API -> Task: error 500
+    end
+end
+
+group Submit Cancel form behavior
+    Client -> View: segment/edit&promotionId=XXXXXX&segmentId=YYYYYY\nClick cancel <button />
+    View -> Task: onSubmit\nactions@cancelPutSegmentUpdateData\nCANCEL_PUT_SEGMENT_DATA
+    activate Task #ef857d
+    hnote over Task #a3d6cc : hundleCancelPostSegmentUpdateData
+    Task -> Reducer : saga@put\nreset
+    Reducer -> State : redux-form@reset
+    State -> View : form要素のリセット
+    Task -> Reducer: saga@put\nDELETE_SEGMENT
+    Reducer -> State: state@segment\nsegmentItem
+    hnote over State #fffacd: segment.segmentItem
+    State -> State: object@assign\nsegmentItem => emply object
+    hnote over State #ead7a4 : 更新前のStateを削除\n（initialValuesにマウントさせたセグメント登録データ）
+    Task -> State: saga@select\nstate => state.promotion.promotionItem.promotion_id
+    hnote over State #fffacd: promotion.promotionItem
+    State -> Task: promotion_id
+    Task -> View: next-routes@pushRoutes\nsegment/list?promotionId=${promotion_id}
+    deactivate Task
+    hnote over View #ead7a4 : セグメント一覧へ遷移
+    View -> Client: GET 200 segment/list?promotionId=XXXXXX
+end
+
+@enduml

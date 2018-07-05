@@ -1,0 +1,45 @@
+@startuml
+title promotion list task
+
+actor Client <<user>>
+participant View
+control Task
+collections Reducer
+database State
+
+Client -> View: GET promotion/list
+hnote over Task #a3d6cc : hundleRequestGetPromotionList
+View -> Task: next@getInitialProps\nGET_PROMOTION_LIST
+hnote over Task #82cddd : runRequestGetPromotionList
+activate Task #ef857d
+Task -> API: saga@call\nGET /v2/promotions
+alt Success 200
+    API -> Task: response status 204
+    Task -> Task: response.json()
+    Task -> Reducer: saga@put\n(SET_PROMOTION_LIST, json)
+    deactivate Task
+    Reducer -> State: state@promotion\npromotionList.data
+    hnote over State #fffacd: promotion.promotionList
+    State -> State: object@assign\npromotionList.data
+    State -> View:
+    View -> Client: GET 200 promotion/list
+else No content 204
+    activate Task #ef857d
+    API -> Task: response status 204
+    Task -> Reducer: saga@put\n(SET_PROMOTION_LIST, [ ])
+    deactivate Task
+    Reducer -> State: state@promotion\npromotionList.data
+    hnote over State #fffacd: promotion.promotionList
+    State -> State: object@assign\npromotionList.data
+    State -> View:
+    View -> Client: GET 200 promotion/list
+else WIP faild 500
+    activate Task #ef857d
+    API -> Task: error 500
+    note left
+        検討中
+    endnote
+    View -> Client: GET 200 promotion/list? or /error
+end
+
+@enduml
